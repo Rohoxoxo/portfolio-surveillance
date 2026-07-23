@@ -1,0 +1,48 @@
+name: Refresh Portfolio Surveillance Data
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  refresh-pipeline:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Pull latest SEC 13F filings
+        run: python fetch_13f.py
+
+      - name: Pull latest benchmark prices
+        run: python fetch_prices.py
+
+      - name: Pull latest security prices
+        run: python fetch_security_prices.py
+
+      - name: Load dim_date
+        run: python load_dim_date.py
+
+      - name: Load fact_holdings
+        run: python load_fact_holdings.py
+
+      - name: Load fact_security_returns
+        run: python load_fact_security_returns.py
+
+      - name: Regenerate HHI forecast
+        run: python forecast_hhi.py
+
+      - name: Load fact_forecast
+        run: python load_fact_forecast.py
